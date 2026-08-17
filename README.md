@@ -1092,32 +1092,6 @@ O projeto ainda possui algumas limitações:
 
 ---
 
-# 🔒 Segurança e uso responsável
-
-O PriceMonitor foi desenvolvido como ferramenta de análise e monitoramento.
-
-Boas práticas:
-
-- não publique arquivos `.env`;
-- não publique tokens;
-- não publique cookies;
-- não versione o banco local;
-- não versione perfis do navegador;
-- utilize intervalos razoáveis entre coletas;
-- respeite os termos de uso dos marketplaces;
-- mantenha intervenção humana antes de qualquer compra.
-
-Os alertas devem ser tratados como **indícios de oportunidade**, não como garantia de:
-
-- estoque;
-- preço final;
-- autenticidade;
-- entrega;
-- disponibilidade;
-- manutenção do preço pelo vendedor.
-
----
-
 # 📚 Objetivo educacional
 
 Além de sua aplicação prática, o PriceMonitor também funciona como projeto de estudo e portfólio envolvendo:
