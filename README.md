@@ -927,16 +927,6 @@ TELEGRAM_CHAT_ID=SEU_CHAT_ID
 TELEGRAM_ENABLED=true
 ```
 
-O `.env` deve estar incluído no `.gitignore`.
-
-Nunca publique:
-
-- token do Telegram;
-- cookies;
-- IDs privados;
-- credenciais;
-- sessões do navegador.
-
 ---
 
 # ▶️ Execução
