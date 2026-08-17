@@ -905,8 +905,6 @@ Faça login no Mercado Livre utilizando esse perfil.
 
 Depois feche o Chrome antes de executar o monitor.
 
-> Nunca envie o perfil do navegador para o GitHub. Ele pode conter cookies, sessões e outras informações privadas.
-
 ---
 
 # 🔐 Variáveis de ambiente
