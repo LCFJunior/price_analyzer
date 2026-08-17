@@ -1,0 +1,42 @@
+# Ambiente virtual
+.venv/
+venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Banco local
+*.db
+*.sqlite
+*.sqlite3
+
+# Variáveis e segredos
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Arquivos temporários
+*.tmp
+*.temp
+
+# Playwright / navegador local
+playwright/
+browser_data/
+chrome_data/
+user_data/
+
+# Resultados locais
+resultado_monitoramento.txt
