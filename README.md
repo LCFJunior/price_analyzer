@@ -1,128 +1,718 @@
 # PriceMonitor
 
-Monitor inteligente de preços e oportunidades para marketplaces, desenvolvido em Python.
+Monitor inteligente de preços, promoções e oportunidades para marketplaces, desenvolvido em Python.
 
-O projeto coleta anúncios do Mercado Livre, normaliza os dados, registra o histórico de preços em SQLite, analisa possíveis oportunidades e envia alertas pelo Telegram quando uma oferta atinge a pontuação mínima configurada.
+O PriceMonitor coleta anúncios do Mercado Livre, normaliza e classifica os produtos, registra histórico próprio de preços, compara anúncios equivalentes e utiliza diferentes mecanismos de análise para identificar promoções reais e possíveis anomalias de preço.
 
-> Status atual: MVP funcional para o Mercado Livre. A integração com a Amazon está planejada para uma etapa futura.
+O objetivo do projeto é ir além do percentual de desconto informado pelo marketplace, utilizando dados históricos e comparação entre produtos equivalentes para decidir se uma oferta realmente representa uma oportunidade.
 
-## Objetivo
+> **Status atual:** sistema funcional de monitoramento e análise de preços para o Mercado Livre, com classificação técnica de produtos, histórico próprio, comparação entre anúncios equivalentes e detecção inteligente de oportunidades.
 
-O PriceMonitor foi criado para identificar:
+---
 
-- promoções reais;
-- quedas de preço sem desconto anunciado;
-- possíveis erros de cadastro;
-- descontos artificiais baseados em preços anteriores inflados;
-- anúncios confiáveis com loja oficial, frete grátis e envio FULL.
+## 🎯 Objetivo
 
-A proposta é não confiar apenas no percentual de desconto exibido pelo marketplace. O sistema constrói um histórico próprio e compara o preço atual com valores realmente observados.
+Marketplaces frequentemente exibem descontos calculados a partir de preços anteriores que podem não representar o valor real de mercado.
 
-## Funcionalidades atuais
+O PriceMonitor busca construir sua própria referência de preço.
 
-- Navegação automatizada com Google Chrome e Playwright;
-- perfil persistente para manter sessão e cookies;
+Para isso, o sistema considera diferentes fontes de informação:
+
+- histórico real coletado pelo próprio monitor;
+- preço atual do anúncio;
+- preço anterior informado pelo marketplace;
+- anúncios do mesmo modelo;
+- produtos tecnicamente equivalentes;
+- categoria e características do produto;
+- vendedor;
+- loja oficial;
+- logística do marketplace;
+- frete;
+- confiança na identificação do produto.
+
+A partir dessas informações, o sistema calcula uma pontuação e decide se determinado anúncio representa uma oportunidade relevante.
+
+---
+
+# 🚀 Funcionalidades atuais
+
+## Coleta de anúncios
+
+- Navegação automatizada com Playwright;
+- utilização do Google Chrome;
+- perfil persistente para manter cookies e sessão;
 - pesquisa automática no Mercado Livre;
-- coleta de até dezenas de anúncios por busca;
-- extração de:
-  - ID do anúncio;
-  - título;
-  - preço atual;
-  - preço anterior anunciado;
-  - desconto;
-  - parcelamento;
-  - vendedor;
-  - loja oficial;
-  - envio FULL;
-  - frete;
-  - link;
-- normalização de preços e textos;
-- filtros por:
-  - termos obrigatórios;
-  - termos excluídos;
-  - preço mínimo e máximo;
-  - loja oficial;
-  - envio FULL;
-- armazenamento em SQLite;
-- histórico individual por anúncio;
-- cálculo de:
-  - média histórica;
-  - menor preço observado;
-  - maior preço observado;
-  - último preço;
-  - número de observações;
-- sistema de pontuação de oportunidades;
-- alertas via Telegram;
-- testes isolados dos principais componentes.
+- coleta de dezenas de anúncios por busca;
+- suporte a múltiplos alvos de monitoramento.
 
-## Arquitetura
+Entre os dados coletados estão:
+
+- ID do anúncio;
+- título;
+- preço atual;
+- preço anterior;
+- desconto;
+- parcelamento;
+- vendedor;
+- loja oficial;
+- envio pela logística do marketplace;
+- frete;
+- link;
+- imagem;
+- origem nacional ou internacional.
+
+---
+
+## 🔎 Filtro e validação inicial
+
+Cada monitoramento possui regras próprias de relevância.
+
+Atualmente podem ser utilizados:
+
+- termos obrigatórios;
+- termos excluídos;
+- preço mínimo;
+- preço máximo;
+- exigência de loja oficial;
+- exigência de logística FULL;
+- ativação/desativação do monitoramento;
+- ativação/desativação de notificações.
+
+Isso evita que acessórios, kits ou produtos diferentes sejam analisados como se fossem o produto pesquisado.
+
+---
+
+# 🧠 Classificação inteligente de produtos
+
+O projeto possui uma camada específica para identificar e normalizar produtos.
+
+Atualmente existem classificadores dedicados para:
+
+- GPUs;
+- CPUs;
+- SSDs;
+- produtos genéricos/desconhecidos.
+
+O coordenador `ProductClassifier` seleciona automaticamente o classificador adequado.
 
 ```text
-PriceMonitor/
-├── analyzers/
-│   ├── price_analyzer.py
-│   └── product_filter.py
-├── browser/
-│   └── browser.py
-├── config/
-│   └── settings.py
-├── database/
-│   ├── database.py
-│   └── repository.py
-├── entities/
-│   ├── opportunity.py
-│   ├── product.py
-│   └── search_rule.py
-├── marketplaces/
-│   └── mercadolivre/
-│       └── collector.py
-├── notifications/
-│   └── telegram.py
-├── services/
-│   └── product_factory.py
-├── utils/
-│   ├── money.py
-│   └── text.py
-├── app.py
-├── requirements.txt
-└── .env
+Product
+   ↓
+ProductClassifier
+   ↓
+┌────────────────────┐
+│ GPUClassifier      │
+│ CPUClassifier      │
+│ SSDClassifier      │
+│ GenericClassifier  │
+└────────────────────┘
+   ↓
+ProductProfile
 ```
 
-Também podem existir arquivos de teste na raiz, como:
+---
+
+# 🪪 ProductProfile
+
+Após a classificação, cada produto recebe um perfil normalizado.
+
+O perfil pode conter:
+
+- categoria;
+- fabricante/marca;
+- modelo;
+- variante;
+- capacidade;
+- interface;
+- geração;
+- características técnicas;
+- nível de confiança da identidade;
+- chaves de comparação.
+
+Exemplo conceitual:
 
 ```text
-test_money.py
-test_text.py
-test_factory.py
-test_opportunity.py
-test_product_filter.py
-test_price_analyzer.py
-test_historical_analyzer.py
-test_repository.py
-test_telegram.py
+Produto:
+Samsung 9100 Pro 1TB NVMe Gen5
+
+Categoria:
+ssd
+
+Marca:
+SAMSUNG
+
+Modelo:
+9100 PRO
+
+BROAD:
+ssd_interno_nvme_1tb
+
+TIER:
+ssd_interno_nvme_gen5_1tb
+
+STRICT:
+samsung_9100_pro_1tb_nvme
 ```
 
-## Fluxo do sistema
+---
+
+# 🧩 Sistema BROAD / TIER / STRICT
+
+Uma das principais partes do PriceMonitor é a comparação hierárquica entre produtos.
+
+Existem três níveis principais.
+
+## STRICT
+
+Representa o mesmo modelo específico.
+
+Exemplo:
 
 ```text
-Playwright / Chrome
-        ↓
+Samsung 9100 Pro 1TB
+Samsung 9100 Pro 1TB
+```
+
+Chave:
+
+```text
+samsung_9100_pro_1tb_nvme
+```
+
+Essa comparação possui prioridade máxima.
+
+---
+
+## TIER
+
+Representa produtos tecnicamente semelhantes.
+
+Exemplo:
+
+```text
+Samsung 9100 Pro 1TB Gen5
+WD SN8100 1TB Gen5
+Crucial T705 1TB Gen5
+```
+
+Podem pertencer ao mesmo grupo:
+
+```text
+ssd_interno_nvme_gen5_1tb
+```
+
+Isso impede, por exemplo, que um SSD NVMe Gen5 topo de linha seja comparado diretamente com SSDs NVMe Gen4 básicos apenas porque ambos possuem 1 TB.
+
+---
+
+## BROAD
+
+Representa um grupo mais amplo de produtos.
+
+Exemplo:
+
+```text
+ssd_interno_nvme_1tb
+```
+
+É utilizado como último fallback quando não existem observações suficientes nos níveis mais específicos.
+
+---
+
+## Prioridade de comparação
+
+```text
+STRICT
+   ↓
+TIER
+   ↓
+BROAD
+```
+
+O sistema sempre tenta utilizar a referência mais específica disponível.
+
+---
+
+# 💾 Classificação de SSDs
+
+O classificador de SSDs identifica características como:
+
+- marca;
+- modelo;
+- capacidade;
+- SATA/NVMe/USB;
+- geração PCIe;
+- SSD interno ou externo;
+- formato;
+- confiança da identidade.
+
+Exemplos já reconhecidos:
+
+```text
+Kingston NV3
+WD Black SN850X
+Samsung 990 PRO
+Samsung 9100 PRO
+Crucial P3 Plus
+Kingston A400
+Lexar NM790
+ADATA Legend 800
+SanDisk externos
+```
+
+O sistema também consegue normalizar determinados SKUs e títulos menos padronizados.
+
+Exemplo:
+
+```text
+Disco Sólido Interno Ssd Plus Sa400s37480g Kingston
+```
+
+é reconhecido como:
+
+```text
+Kingston A400 480GB SATA
+```
+
+Produtos que são apenas acessórios, como:
+
+```text
+Case Externo USB para SSD NVMe
+```
+
+não são classificados como SSD.
+
+---
+
+# 🖥️ Classificação de CPUs
+
+O sistema possui classificação dedicada para processadores AMD Ryzen e Intel Core.
+
+## AMD
+
+São identificados:
+
+- família;
+- série;
+- modelo;
+- variante;
+- classe da variante;
+- produto desktop/mobile quando aplicável.
+
+Exemplos:
+
+```text
+Ryzen 7 5700X
+Ryzen 7 5700X3D
+Ryzen 5 5600
+Ryzen 5 5600G
+Ryzen 7 7800X3D
+Ryzen 9 9950X
+```
+
+Exemplo de hierarquia:
+
+```text
+BROAD
+cpu_amd_ryzen_7
+
+TIER
+cpu_amd_ryzen_7_5000_x
+
+STRICT
+amd_ryzen_7_5700x
+```
+
+Variantes como:
+
+```text
+standard
+X
+X3D
+APU
+```
+
+podem ser separadas no nível TIER.
+
+---
+
+## Intel
+
+São identificados processadores de diferentes gerações e variantes.
+
+Exemplos:
+
+```text
+Core i5-10400
+Core i7-11700
+Core i5-12400F
+Core i5-13600KF
+Core i7-14700K
+Core i9-14900KS
+Core i9-9900K
+```
+
+Exemplo:
+
+```text
+BROAD
+cpu_intel_core_i7
+
+TIER
+cpu_intel_core_i7_gen14_performance
+
+STRICT
+intel_core_i7_14700k
+```
+
+Sufixos como:
+
+```text
+F
+K
+KF
+KS
+```
+
+são preservados.
+
+O classificador também evita interpretar acessórios como processadores.
+
+Exemplos bloqueados:
+
+```text
+Caixa vazia Ryzen 7 5700X
+Kit Upgrade Ryzen 7 5700X + B550
+Cooler para Ryzen 7 5700X
+Placa-mãe B550 para Ryzen 7 5700X
+```
+
+---
+
+# 🎮 Classificação de GPUs
+
+O sistema possui classificação dedicada para placas de vídeo.
+
+A classificação identifica informações como:
+
+- fabricante;
+- modelo da GPU;
+- memória;
+- variante;
+- família;
+- chaves de comparação.
+
+Isso permite separar modelos diferentes e evitar comparações inadequadas entre placas de categorias distintas.
+
+---
+
+# 📊 Histórico próprio de preços
+
+Cada coleta válida gera uma nova observação no banco SQLite.
+
+O sistema mantém histórico individual por anúncio.
+
+As estatísticas disponíveis incluem:
+
+- número de observações;
+- menor preço;
+- maior preço;
+- média;
+- mediana;
+- desvio padrão;
+- preço anterior/mais recente.
+
+Exemplo:
+
+```text
+Observações: 4
+Menor preço: R$ 2.450
+Maior preço: R$ 2.550
+Média: R$ 2.500
+Mediana: R$ 2.500
+```
+
+A análise de baseline é realizada antes de salvar a coleta atual, impedindo que o preço que está sendo analisado seja utilizado como referência de si próprio.
+
+---
+
+# 👥 Comparação entre anúncios equivalentes
+
+O `PeerPriceAnalyzer` cria uma referência de mercado utilizando outros anúncios equivalentes.
+
+A busca segue a prioridade:
+
+```text
+mesmo modelo
+    ↓
+mesmo tier
+    ↓
+grupo geral
+```
+
+Os grupos também podem separar:
+
+```text
+nacional
+internacional
+```
+
+Isso reduz comparações inadequadas entre produtos com condições comerciais diferentes.
+
+---
+
+# 🏪 Deduplicação por vendedor
+
+Um marketplace pode possuir diversos anúncios do mesmo produto publicados pela mesma loja.
+
+Sem tratamento, uma loja com muitos anúncios poderia dominar artificialmente a média e a mediana.
+
+O PriceMonitor reduz esse problema consolidando anúncios equivalentes do mesmo vendedor antes de gerar as estatísticas comerciais.
+
+Exemplo:
+
+```text
+Loja A
+├── anúncio 1
+├── anúncio 2
+├── anúncio 3
+├── anúncio 4
+└── anúncio 5
+```
+
+não necessariamente recebe cinco vezes o peso de:
+
+```text
+Loja B
+└── anúncio 1
+```
+
+Isso produz uma referência de mercado mais equilibrada.
+
+---
+
+# 📈 Análise de oportunidades
+
+O sistema possui mecanismos diferentes para analisar possíveis oportunidades.
+
+Entre os sinais utilizados estão:
+
+- diferença em relação ao histórico do próprio anúncio;
+- diferença em relação ao mesmo modelo;
+- diferença em relação ao mesmo tier;
+- diferença em relação ao grupo geral;
+- desconto anunciado;
+- loja oficial;
+- logística do marketplace;
+- frete grátis;
+- confiança na identidade do produto.
+
+---
+
+# 🔥 PromotionEngine
+
+O `PromotionEngine` procura promoções reais utilizando múltiplos sinais.
+
+Exemplo de uma análise:
+
+```text
+Produto:
+Samsung 9100 Pro 1TB
+
+Preço atual:
+R$ 1.850
+
+Mediana histórica:
+R$ 2.500
+
+Mediana de anúncios equivalentes:
+R$ 2.500
+```
+
+O sistema pode identificar:
+
+```text
+Preço abaixo do histórico: 26%
+Preço abaixo do mesmo modelo: 26%
+Desconto anunciado: 28,8%
+Loja oficial
+FULL
+Frete grátis
+```
+
+e gerar uma pontuação.
+
+Exemplo:
+
+```text
+Score: 80/100
+Tipo: promocao
+Confiança: alta
+Notificar: True
+```
+
+---
+
+# ⚠️ BugEngine
+
+O projeto também possui uma análise específica para possíveis anomalias ou erros de preço.
+
+O objetivo é diferenciar:
+
+```text
+promoção legítima
+```
+
+de situações extremamente fora do padrão que podem representar:
+
+```text
+erro de cadastro
+erro de preço
+produto diferente
+identidade incorreta
+anúncio suspeito
+```
+
+Quando diferentes mecanismos encontram sinais no mesmo produto, o sistema utiliza regras para decidir qual interpretação possui maior prioridade.
+
+---
+
+# 🛡️ Confiança da identidade
+
+A classificação do produto possui níveis de confiança.
+
+Exemplos:
+
+```text
+alta
+media
+baixa
+muito_baixa
+```
+
+Produtos cuja identidade não pôde ser determinada de maneira confiável recebem penalizações na análise.
+
+Isso evita transformar automaticamente um produto genérico extremamente barato em uma "promoção imperdível".
+
+---
+
+# 🔬 Validação profunda
+
+O sistema possui uma etapa adicional antes de determinados alertas.
+
+Quando uma oportunidade importante é detectada, uma validação mais profunda pode verificar novamente o anúncio antes da notificação.
+
+Possíveis resultados incluem:
+
+```text
+valid
+blocked
+inconclusive
+```
+
+Somente oportunidades aprovadas pelo fluxo configurado seguem para notificação.
+
+---
+
+# 🔔 Controle de alertas duplicados
+
+O PriceMonitor registra notificações já realizadas.
+
+Isso permite impedir que o usuário receba repetidamente o mesmo alerta sem uma mudança relevante.
+
+As decisões de notificação podem considerar:
+
+- primeiro alerta;
+- alertas anteriores;
+- preço anteriormente notificado;
+- nova queda relevante;
+- estado atual do anúncio.
+
+---
+
+# 📱 Telegram
+
+O projeto possui integração com Telegram para envio das oportunidades aprovadas.
+
+Uma notificação pode incluir:
+
+```text
+Produto
+Preço
+Score
+Tipo da oportunidade
+Confiança
+Motivos da decisão
+Link do anúncio
+```
+
+O envio ocorre apenas quando o produto passa pelas regras configuradas.
+
+---
+
+# 🔄 Fluxo geral
+
+```text
+MonitoringTarget
+       ↓
 MercadoLivreCollector
-        ↓
+       ↓
 ProductFactory
-        ↓
-ProductFilter
-        ↓
-SQLite / ProductRepository
-        ↓
-PriceAnalyzer
-        ↓
-Opportunity
-        ↓
+       ↓
+Filtro / Validação inicial
+       ↓
+ProductClassifier
+       ↓
+ProductProfile
+       ↓
+┌──────────────────────────┐
+│ Histórico próprio        │
+│ PeerPriceAnalyzer        │
+└──────────────────────────┘
+       ↓
+PromotionEngine / BugEngine
+       ↓
+Seleção da oportunidade
+       ↓
+Validação profunda
+       ↓
+Controle de duplicidade
+       ↓
 TelegramNotifier
+       ↓
+Registro da notificação
 ```
 
-## Tecnologias
+---
+
+# 🗃️ Banco de dados
+
+O projeto utiliza SQLite.
+
+O banco armazena informações como:
+
+- produtos conhecidos;
+- histórico de preços;
+- observações;
+- notificações enviadas.
+
+Entre as principais estruturas estão:
+
+```text
+products
+price_history
+notifications
+```
+
+O banco é criado e atualizado localmente pelo projeto.
+
+Arquivos `.db` não devem ser enviados ao GitHub.
+
+---
+
+# 🛠️ Tecnologias
+
+Principais tecnologias utilizadas:
 
 - Python;
 - Playwright;
@@ -130,47 +720,172 @@ TelegramNotifier
 - SQLite;
 - Requests;
 - python-dotenv;
-- Telegram Bot API.
-
-## Requisitos
-
-- Python instalado;
-- Google Chrome instalado;
+- Telegram Bot API;
 - Git;
-- conta no Telegram;
-- bot criado com o BotFather.
+- GitHub.
 
-## Instalação
+---
+
+# 📁 Estrutura do projeto
+
+A estrutura pode evoluir conforme novos módulos forem adicionados, mas atualmente segue aproximadamente a organização:
+
+```text
+PriceMonitor/
+│
+├── analyzers/
+│   ├── peer_price_analyzer.py
+│   └── ...
+│
+├── browser/
+│   └── browser.py
+│
+├── config/
+│   ├── settings.py
+│   └── monitoring_targets.py
+│
+├── database/
+│   ├── database.py
+│   └── repository.py
+│
+├── entities/
+│   ├── product.py
+│   ├── product_profile.py
+│   ├── opportunity.py
+│   ├── monitoring_target.py
+│   └── search_rule.py
+│
+├── marketplaces/
+│   └── mercadolivre/
+│       └── collector.py
+│
+├── notifications/
+│   └── telegram.py
+│
+├── services/
+│   ├── classifiers/
+│   │   ├── base.py
+│   │   ├── text_utils.py
+│   │   ├── gpu_classifier.py
+│   │   ├── cpu_classifier.py
+│   │   ├── ssd_classifier.py
+│   │   └── generic_classifier.py
+│   │
+│   ├── product_classifier.py
+│   ├── product_factory.py
+│   ├── monitor_service.py
+│   ├── batch_monitor_service.py
+│   └── ...
+│
+├── app.py
+├── requirements.txt
+├── .gitignore
+└── README.md
+```
+
+---
+
+# 🧪 Testes
+
+O projeto possui testes independentes para validar partes críticas da arquitetura.
+
+Entre eles estão testes relacionados a:
+
+```text
+classificação de SSD
+classificação de CPU
+classificação de GPU
+histórico de preços
+baseline histórico
+comparação entre equivalentes
+STRICT / TIER / BROAD
+deduplicação por vendedor
+PromotionEngine
+fluxo completo de promoção
+controle de notificações
+```
+
+Exemplos:
+
+```powershell
+python test_ssd_classifier.py
+python test_cpu_classifier.py
+python test_peer_tier.py
+python test_peer_seller_dedup.py
+python test_repository_baseline.py
+python test_promotion_engine.py
+python test_promotion_flow.py
+```
+
+Os testes utilizam verificações automáticas com `assert` para impedir regressões durante a evolução do sistema.
+
+---
+
+# ⚙️ Requisitos
+
+Para executar o projeto:
+
+- Python;
+- Google Chrome;
+- Git;
+- Playwright;
+- conta no Telegram para notificações;
+- bot do Telegram configurado.
+
+---
+
+# 📥 Instalação
 
 Clone o repositório:
 
 ```bash
 git clone URL_DO_REPOSITORIO
-cd PriceMonitor
+cd price_analyzer
 ```
 
-Crie o ambiente virtual:
+Crie o ambiente virtual.
 
-### Windows PowerShell
+## Windows PowerShell
 
 ```powershell
 python -m venv .venv
+```
+
+Ative:
+
+```powershell
 .\.venv\Scripts\Activate.ps1
+```
+
+Atualize o pip:
+
+```powershell
+python -m pip install --upgrade pip
 ```
 
 Instale as dependências:
 
 ```powershell
-python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
+```
+
+Instale os navegadores necessários ao Playwright:
+
+```powershell
 python -m playwright install
 ```
 
-## Configuração do Chrome
+---
 
-O projeto utiliza um perfil exclusivo do Chrome para persistir cookies e sessão.
+# 🌐 Configuração do Chrome
 
-Caminhos usados atualmente:
+O projeto pode utilizar um perfil exclusivo do Chrome para persistir:
+
+- cookies;
+- login;
+- sessão do marketplace.
+
+Exemplo de configuração local:
 
 ```text
 Executável:
@@ -180,19 +895,31 @@ Perfil:
 C:\ChromePriceMonitor
 ```
 
-O perfil pode ser criado manualmente com:
+O perfil pode ser criado manualmente:
 
 ```powershell
 & "C:\Program Files\Google\Chrome\Application\chrome.exe" --user-data-dir="C:\ChromePriceMonitor"
 ```
 
-Faça login no Mercado Livre nesse perfil e feche o navegador antes de executar o projeto.
+Faça login no Mercado Livre utilizando esse perfil.
 
-> Não envie a pasta `C:\ChromePriceMonitor` para o GitHub. Ela pode conter cookies, sessões e informações privadas.
+Depois feche o Chrome antes de executar o monitor.
 
-## Configuração do Telegram
+> Nunca envie o perfil do navegador para o GitHub. Ele pode conter cookies, sessões e outras informações privadas.
 
-Crie um arquivo `.env` na raiz:
+---
+
+# 🔐 Variáveis de ambiente
+
+Crie um arquivo:
+
+```text
+.env
+```
+
+na raiz do projeto.
+
+Exemplo:
 
 ```env
 TELEGRAM_BOT_TOKEN=SEU_TOKEN
@@ -200,108 +927,262 @@ TELEGRAM_CHAT_ID=SEU_CHAT_ID
 TELEGRAM_ENABLED=true
 ```
 
-Nunca publique o `.env` nem o token do bot.
+O `.env` deve estar incluído no `.gitignore`.
 
-Teste a integração:
+Nunca publique:
 
-```powershell
-python test_telegram.py
-```
+- token do Telegram;
+- cookies;
+- IDs privados;
+- credenciais;
+- sessões do navegador.
 
-## Execução
+---
+
+# ▶️ Execução
+
+Com o ambiente virtual ativado:
 
 ```powershell
 python app.py
 ```
 
-O programa:
+O sistema executará aproximadamente o seguinte fluxo:
 
-1. abre o Chrome;
-2. pesquisa os produtos;
-3. coleta e filtra os anúncios;
-4. registra os preços no banco;
-5. compara os preços com o histórico;
-6. calcula a pontuação;
-7. envia ao Telegram apenas as oportunidades aprovadas.
+1. carrega os alvos de monitoramento;
+2. abre o navegador;
+3. pesquisa os produtos;
+4. coleta os anúncios;
+5. normaliza os dados;
+6. aplica filtros de relevância;
+7. classifica os produtos;
+8. recupera o histórico anterior;
+9. cria referências entre anúncios equivalentes;
+10. analisa promoções e anomalias;
+11. executa validações adicionais quando necessário;
+12. decide se deve notificar;
+13. envia oportunidades aprovadas;
+14. registra preços e notificações no banco.
 
-## Banco de dados
+---
 
-O banco é criado automaticamente em:
+# 🎯 Alvos de monitoramento
+
+O sistema suporta múltiplos produtos monitorados.
+
+Exemplos utilizados durante o desenvolvimento:
 
 ```text
-database/price_monitor.db
+NVIDIA RTX 5070 12GB
+AMD Ryzen 7 5700X
+SSD NVMe 1TB
 ```
 
-Tabelas principais:
+Cada alvo pode possuir:
 
-- `products`: informações atuais e estáveis do anúncio;
-- `price_history`: observações de preço ao longo do tempo.
-
-O banco local não deve ser versionado, pois cresce a cada execução e contém dados específicos do ambiente de monitoramento.
-
-## Testes
-
-Os testes atuais podem ser executados individualmente:
-
-```powershell
-python test_money.py
-python test_text.py
-python test_factory.py
-python test_product_filter.py
-python test_price_analyzer.py
-python test_historical_analyzer.py
-python test_repository.py
-python test_telegram.py
+```text
+search_query
+required_terms
+excluded_terms
+minimum_price
+maximum_price
+require_official_store
+require_full
+enabled
+notifications_enabled
 ```
 
-## Situação atual do analisador
+Isso permite desenvolver e testar novas categorias sem necessariamente habilitar alertas imediatamente.
 
-O sistema já diferencia:
+---
 
-- preço anterior anunciado pelo vendedor;
-- histórico real coletado pelo próprio bot;
-- média histórica;
-- menor preço anterior;
-- preço da última coleta.
+# 📊 Exemplo de resultado
 
-A pontuação histórica só é aplicada depois de uma quantidade mínima de observações, reduzindo falsos positivos.
+Uma oportunidade pode gerar uma análise semelhante a:
 
-O preço riscado pelo marketplace possui peso menor, pois pode estar artificialmente inflado.
+```text
+Produto:
+SSD Samsung 9100 Pro 1TB NVMe Gen5 X4
 
-## Limitações atuais
+Preço:
+R$ 1.850,00
 
-- suporta apenas Mercado Livre;
-- monitora uma busca configurada diretamente no código;
-- ainda não valida cupons no carrinho;
-- ainda não agrupa anúncios diferentes do mesmo modelo;
-- ainda não possui execução agendada definitiva;
-- seletores do marketplace podem mudar;
-- CAPTCHA ou expiração de sessão podem exigir intervenção manual;
+Classificação geral:
+ssd_interno_nvme_1tb
+
+Tier:
+ssd_interno_nvme_gen5_1tb
+
+Classificação específica:
+samsung_9100_pro_1tb_nvme
+
+Marca:
+SAMSUNG
+
+Modelo:
+9100 PRO
+
+Confiança da identidade:
+alta
+
+Score:
+80/100
+
+Tipo:
+promocao
+
+Confiança:
+alta
+
+Notificar:
+Sim
+
+Mediana histórica:
+R$ 2.500,00
+
+Escopo dos equivalentes:
+modelo_exato_nacional
+
+Mediana dos equivalentes:
+R$ 2.500,00
+```
+
+Motivos:
+
+```text
+- Preço bem abaixo do histórico do próprio anúncio
+- Preço muito abaixo de anúncios do mesmo modelo
+- Desconto anunciado relevante
+- Produto vendido por loja oficial
+- Produto enviado pela logística do marketplace
+- Frete grátis
+```
+
+---
+
+# 🛣️ Roadmap
+
+O projeto continua em desenvolvimento.
+
+Algumas evoluções planejadas são:
+
+- ampliar a quantidade de categorias suportadas;
+- melhorar continuamente os classificadores;
+- adicionar mais modelos conhecidos;
+- melhorar detecção de produtos genéricos;
+- expandir os níveis de equivalência comercial;
+- análise estatística mais avançada;
+- aumentar cobertura de testes;
+- migração progressiva para `pytest`;
+- execução agendada;
+- monitoramento contínuo;
+- integração com Amazon;
+- suporte a outros marketplaces;
+- análise de preço efetivo com cupom;
+- validação opcional de cupons;
+- painel web;
+- API para consulta dos dados;
+- métricas e observabilidade;
+- configuração dinâmica dos produtos monitorados.
+
+---
+
+# ⚠️ Limitações atuais
+
+O projeto ainda possui algumas limitações:
+
+- foco atual no Mercado Livre;
+- classificadores precisam evoluir conforme novos produtos aparecem;
+- títulos de anúncios podem conter informações incorretas;
+- mudanças no HTML do marketplace podem exigir atualização dos seletores;
+- CAPTCHA pode exigir intervenção manual;
+- sessão do marketplace pode expirar;
+- quantidade pequena de anúncios equivalentes reduz a confiança estatística;
+- produtos novos podem não possuir histórico suficiente;
+- cupons ainda não fazem parte integral do cálculo do preço efetivo;
 - o sistema não realiza compras automaticamente.
 
-## Próximas etapas
+---
 
-- comparação entre anúncios equivalentes;
-- identificação de marca, modelo, capacidade e categoria;
-- preço efetivo com cupom;
-- validação opcional de cupom no carrinho;
-- prevenção de alertas duplicados;
-- serviço central de monitoramento;
-- execução agendada;
-- integração com Amazon;
-- painel web;
-- testes automatizados com pytest;
-- análise estatística avançada de anomalias.
+# 🔒 Segurança e uso responsável
 
-## Segurança e uso responsável
+O PriceMonitor foi desenvolvido como ferramenta de análise e monitoramento.
 
-- não publique tokens, cookies ou arquivos `.env`;
+Boas práticas:
+
+- não publique arquivos `.env`;
+- não publique tokens;
+- não publique cookies;
+- não versione o banco local;
 - não versione perfis do navegador;
+- utilize intervalos razoáveis entre coletas;
 - respeite os termos de uso dos marketplaces;
-- use intervalos razoáveis entre coletas;
-- mantenha intervenção humana para compras;
-- trate alertas como indícios, não como garantia de estoque, preço ou entrega.
+- mantenha intervenção humana antes de qualquer compra.
 
-## Autor
+Os alertas devem ser tratados como **indícios de oportunidade**, não como garantia de:
 
-Desenvolvido por Luiz Carlos F. Junior como projeto de automação, monitoramento de preços e análise de oportunidades.
+- estoque;
+- preço final;
+- autenticidade;
+- entrega;
+- disponibilidade;
+- manutenção do preço pelo vendedor.
+
+---
+
+# 📚 Objetivo educacional
+
+Além de sua aplicação prática, o PriceMonitor também funciona como projeto de estudo e portfólio envolvendo:
+
+- automação web;
+- scraping;
+- modelagem de dados;
+- arquitetura de software;
+- orientação a objetos;
+- classificação de produtos;
+- processamento de texto;
+- análise estatística;
+- SQLite;
+- sistemas de pontuação;
+- detecção de anomalias;
+- integração com APIs;
+- testes;
+- Git e GitHub.
+
+---
+
+# 📌 Estado do desenvolvimento
+
+Atualmente o projeto já possui um fluxo funcional envolvendo:
+
+```text
+Coleta
+   ↓
+Filtro
+   ↓
+Classificação
+   ↓
+Histórico
+   ↓
+Comparação com equivalentes
+   ↓
+Detecção de oportunidades
+   ↓
+Validação
+   ↓
+Controle de duplicidade
+   ↓
+Notificação
+```
+
+A prioridade atual do desenvolvimento é aumentar a qualidade da inteligência de comparação e reduzir falsos positivos antes da expansão para novos marketplaces.
+
+---
+
+# 👨‍💻 Autor
+
+Desenvolvido por **Luiz Carlos F. Junior**.
+
+Projeto pessoal voltado ao estudo e aplicação prática de:
+
+**Python, automação, análise de dados, monitoramento de preços e engenharia de software.**
