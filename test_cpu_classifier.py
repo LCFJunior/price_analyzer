@@ -98,7 +98,6 @@ def main() -> None:
             ),
         ),
 
-        # Caso real encontrado na coleta ampla.
         create_product(
             "AMD009",
             (
@@ -166,7 +165,6 @@ def main() -> None:
             ),
         ),
 
-        # Casos reais antigos.
         create_product(
             "INTEL008",
             (
@@ -378,8 +376,6 @@ def main() -> None:
         == "x"
     )
 
-    # OEM e BOX do mesmo processador
-    # precisam gerar a mesma identidade.
     assert (
         profiles["AMD001"].strict_key
         == profiles["AMD002"].strict_key
@@ -420,7 +416,6 @@ def main() -> None:
         == "x3d"
     )
 
-    # X e X3D não devem compartilhar tier.
     assert (
         profiles["AMD003"].tier_key
         != profiles["AMD001"].tier_key
@@ -507,7 +502,7 @@ def main() -> None:
     )
 
     # ======================================================
-    # AMD 5600GT - CASO REAL
+    # AMD 5600GT
     # ======================================================
 
     assert (
@@ -530,21 +525,18 @@ def main() -> None:
         == "cpu_amd_ryzen_5_5000_apu"
     )
 
-    # 5600GT e 5600G pertencem
-    # à mesma classe comercial.
     assert (
         profiles["AMD009"].tier_key
         == profiles["AMD005"].tier_key
     )
 
-    # Mas 5600 sem iGPU não.
     assert (
         profiles["AMD009"].tier_key
         != profiles["AMD004"].tier_key
     )
 
     # ======================================================
-    # INTEL 10ª STANDARD
+    # INTEL 10ª STANDARD / DESKTOP
     # ======================================================
 
     assert (
@@ -564,7 +556,7 @@ def main() -> None:
 
     assert (
         profiles["INTEL001"].broad_key
-        == "cpu_intel_core_i5"
+        == "cpu_intel_core_i5_desktop"
     )
 
     assert (
@@ -580,9 +572,20 @@ def main() -> None:
         == "intel_core_i5_10400"
     )
 
+    assert (
+        profiles["INTEL001"]
+        .attributes["mobile"]
+        is False
+    )
+
     # ======================================================
-    # INTEL 11ª STANDARD
+    # INTEL 11ª STANDARD / DESKTOP
     # ======================================================
+
+    assert (
+        profiles["INTEL002"].broad_key
+        == "cpu_intel_core_i7_desktop"
+    )
 
     assert (
         profiles["INTEL002"].tier_key
@@ -604,6 +607,11 @@ def main() -> None:
     assert (
         profiles["INTEL003"].variant
         == "F"
+    )
+
+    assert (
+        profiles["INTEL003"].broad_key
+        == "cpu_intel_core_i5_desktop"
     )
 
     assert (
@@ -635,6 +643,11 @@ def main() -> None:
     )
 
     assert (
+        profiles["INTEL004"].broad_key
+        == "cpu_intel_core_i5_desktop"
+    )
+
+    assert (
         profiles["INTEL004"].tier_key
         == (
             "cpu_intel_core_i5_"
@@ -645,6 +658,11 @@ def main() -> None:
     # ======================================================
     # INTEL K
     # ======================================================
+
+    assert (
+        profiles["INTEL005"].broad_key
+        == "cpu_intel_core_i7_desktop"
+    )
 
     assert (
         profiles["INTEL005"].tier_key
@@ -669,6 +687,11 @@ def main() -> None:
     )
 
     assert (
+        profiles["INTEL006"].broad_key
+        == "cpu_intel_core_i9_desktop"
+    )
+
+    assert (
         profiles["INTEL006"].tier_key
         == (
             "cpu_intel_core_i9_"
@@ -679,6 +702,11 @@ def main() -> None:
     # ======================================================
     # INTEL 9ª
     # ======================================================
+
+    assert (
+        profiles["INTEL007"].broad_key
+        == "cpu_intel_core_i9_desktop"
+    )
 
     assert (
         profiles["INTEL007"].tier_key
@@ -693,11 +721,21 @@ def main() -> None:
     # ======================================================
 
     assert (
+        profiles["INTEL008"].broad_key
+        == "cpu_intel_core_i5_desktop"
+    )
+
+    assert (
         profiles["INTEL008"].tier_key
         == (
             "cpu_intel_core_i5_"
             "gen3_standard"
         )
+    )
+
+    assert (
+        profiles["INTEL009"].broad_key
+        == "cpu_intel_core_i7_desktop"
     )
 
     assert (
@@ -709,7 +747,7 @@ def main() -> None:
     )
 
     # ======================================================
-    # INTEL MÓVEL LEGADO
+    # INTEL MOBILE LEGADO
     # ======================================================
 
     assert (
@@ -728,6 +766,11 @@ def main() -> None:
     )
 
     assert (
+        profiles["INTEL010"].broad_key
+        == "cpu_intel_core_i5_mobile"
+    )
+
+    assert (
         profiles["INTEL010"].tier_key
         == (
             "cpu_intel_core_i5_"
@@ -739,6 +782,15 @@ def main() -> None:
         profiles["INTEL010"]
         .attributes["mobile"]
         is True
+    )
+
+    # ======================================================
+    # DESKTOP E MOBILE DEVEM SER DIFERENTES
+    # ======================================================
+
+    assert (
+        profiles["INTEL010"].broad_key
+        != profiles["INTEL001"].broad_key
     )
 
     # ======================================================
@@ -807,8 +859,18 @@ def main() -> None:
     )
 
     print(
-        "✓ Intel móvel separado "
-        "de desktop"
+        "✓ Intel desktop possui "
+        "BROAD próprio"
+    )
+
+    print(
+        "✓ Intel mobile possui "
+        "BROAD próprio"
+    )
+
+    print(
+        "✓ Intel mobile não entra "
+        "no BROAD desktop"
     )
 
     print(
@@ -821,12 +883,13 @@ def main() -> None:
     )
 
     print(
-        "✓ TIER agora considera "
+        "✓ TIER considera "
         "classe de variante"
     )
 
     print(
-        "✓ BROAD continua por família"
+        "✓ BROAD agora considera "
+        "desktop/mobile na Intel"
     )
 
     print(

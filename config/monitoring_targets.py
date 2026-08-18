@@ -11,45 +11,76 @@ def get_monitoring_targets() -> list[
 ]:
     return [
         # ======================================================
-        # GPU
+        # GPU AMPLA
+        #
+        # Busca geral por placas de vídeo.
+        #
+        # O filtro inicial fica propositalmente mais aberto,
+        # porque a triagem principal será feita pelo
+        # GPUClassifier.
+        #
+        # Notificações ficam desligadas enquanto observamos
+        # resultados reais do Mercado Livre.
         # ======================================================
 
         MonitoringTarget(
-            name="NVIDIA RTX 5070 12GB",
+            name="Placas de Vídeo",
 
-            search_query="RTX 5070",
+            search_query=(
+                "Placa de Video"
+            ),
 
             relevance_rule=SearchRule(
                 required_terms=(
-                    "rtx",
-                    "5070",
+                    "placa",
+                    "video",
                 ),
 
                 excluded_terms=(
-                    "5070 ti",
-                    "5070ti",
+                    "notebook",
+                    "laptop",
+                    "pc gamer",
+                    "computador gamer",
+                    "computador completo",
+                    "kit upgrade",
+                    "placa mae",
+                    "placa-mãe",
+                    "motherboard",
+                    "waterblock",
+                    "water block",
+                    "suporte",
+                    "riser",
+                    "backplate",
+                    "caixa vazia",
+                    "ventoinha",
+                    "fan para",
+                    "cooler para",
                 ),
 
                 minimum_price=None,
+
                 maximum_price=None,
 
                 require_official_store=False,
+
                 require_full=False,
             ),
 
             enabled=True,
 
-            notifications_enabled=True,
+            notifications_enabled=False,
         ),
 
         # ======================================================
-        # PROCESSADORES
+        # CPU AMPLA
         # ======================================================
 
         MonitoringTarget(
             name="Processadores",
 
-            search_query="Processador",
+            search_query=(
+                "Processador"
+            ),
 
             relevance_rule=SearchRule(
                 required_terms=(
@@ -57,94 +88,60 @@ def get_monitoring_targets() -> list[
                 ),
 
                 excluded_terms=(
-                    # ------------------------------------------
-                    # Kits / acessórios de computador
-                    # ------------------------------------------
-
-                    "kit",
-                    "kit upgrade",
-
+                    "processador de alimentos",
+                    "processador alimentos",
+                    "processador de audio",
+                    "processador audio",
+                    "processador digital de audio",
+                    "processador digital audio",
+                    "som automotivo",
+                    "crossover",
+                    "equalizador",
+                    "mixer",
+                    "mini processador",
+                    "mini-processador",
+                    "multiprocessador",
+                    "pasta termica",
+                    "pasta térmica",
+                    "lamina",
+                    "lâmina",
+                    "laminas",
+                    "lâminas",
                     "placa mae",
                     "placa-mãe",
                     "motherboard",
-
+                    "kit upgrade",
+                    "cooler para",
                     "caixa vazia",
-                    "caixa do processador",
-                    "embalagem vazia",
-
                     "adesivo",
-                    "sticker",
                     "blister",
                     "manual",
-                    "chaveiro",
-
-                    "cooler para",
-                    "water cooler para",
-                    "suporte para",
-
-                    "pasta termica",
-                    "pasta térmica",
-
-                    # ------------------------------------------
-                    # Áudio automotivo
-                    # ------------------------------------------
-
-                    "processador de audio",
-                    "processador de áudio",
-                    "processador audio",
-                    "processador áudio",
-
-                    "som automotivo",
-
-                    "crossover",
-                    "equalizador",
-
-                    "stetsom",
-                    "taramps",
-
-                    # ------------------------------------------
-                    # Eletrodomésticos / alimentos
-                    # ------------------------------------------
-
-                    "processador de alimentos",
-                    "mini processador",
-                    "multiprocessador",
-
-                    "mixer",
-
-                    "walita",
-                    "oster",
-                    "kian",
-
-                    "laminas",
-                    "lâminas",
-
-                    "250ml",
-                    "500ml",
                 ),
 
                 minimum_price=None,
+
                 maximum_price=None,
 
                 require_official_store=False,
+
                 require_full=False,
             ),
 
             enabled=True,
 
-            # Mantemos observação até completar
-            # esta rodada de validação.
             notifications_enabled=False,
         ),
 
         # ======================================================
-        # SSD
+        # SSD AMPLA
         # ======================================================
 
         MonitoringTarget(
-            name="SSDs",
+            name="SSD",
 
-            search_query="SSD",
+            search_query=(
+                "SSD"
+            ),
 
             relevance_rule=SearchRule(
                 required_terms=(
@@ -153,23 +150,21 @@ def get_monitoring_targets() -> list[
 
                 excluded_terms=(
                     "case",
-                    "case externo",
                     "adaptador",
-                    "adaptador ssd",
                     "gaveta",
-                    "caddy",
                     "suporte",
                     "cabo",
-                    "enclosure",
-                    "leitor",
                     "dock",
                     "docking",
+                    "enclosure",
                 ),
 
                 minimum_price=None,
+
                 maximum_price=None,
 
                 require_official_store=False,
+
                 require_full=False,
             ),
 

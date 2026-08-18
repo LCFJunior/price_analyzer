@@ -29,40 +29,58 @@ class CPUClassifier:
 
         BROAD
         mesma família geral
+
+    Para Intel, o BROAD também separa:
+
+        desktop
+        mobile
     """
 
     # ==========================================================
     # AMD
+    #
+    # O modelo é capturado junto da família.
+    #
+    # Isso evita casos como:
+    #
+    # PC Gamer Ryzen 7 RTX 5070
+    #
+    # virar incorretamente:
+    #
+    # Ryzen 7 5070
     # ==========================================================
 
-    AMD_FAMILY_PATTERNS = (
+    AMD_FULL_PATTERNS = (
         re.compile(
             r"\b"
+            r"(?:amd\s+)?"
             r"ryzen\s+"
             r"([3579])"
-            r"\b"
+            r"(?:\s+(?:serie|series|r[3579]))?"
+            r"\s+"
+            r"(\d{4})"
+            r"(x3d|xt|gt|x|ge|g|f)?"
+            r"(?=[^a-z]|$)"
         ),
 
         re.compile(
             r"\b"
             r"amd\s+"
             r"r([3579])"
-            r"\b"
+            r"\s+"
+            r"(\d{4})"
+            r"(x3d|xt|gt|x|ge|g|f)?"
+            r"(?=[^a-z]|$)"
         ),
 
         re.compile(
             r"\b"
             r"r([3579])"
             r"\s+"
-            r"\d{4}"
+            r"(\d{4})"
+            r"(x3d|xt|gt|x|ge|g|f)?"
+            r"(?=[^a-z]|$)"
         ),
-    )
-
-    AMD_MODEL_PATTERN = re.compile(
-        r"\b"
-        r"(\d{4})"
-        r"(x3d|xt|gt|x|ge|g|f)?"
-        r"(?=[^a-z]|$)"
     )
 
     AMD_VARIANTS = {
@@ -127,6 +145,11 @@ class CPUClassifier:
 
         r"\bplaca\s+mae\b",
         r"\bmotherboard\b",
+
+        r"\bpc\s+gamer\b",
+        r"\bcomputador\s+gamer\b",
+        r"\bcomputador\s+completo\b",
+        r"\bdesktop\s+gamer\b",
 
         r"\bcaixa\s+vazia\b",
         r"\bcaixa\s+do\s+processador\b",
@@ -299,65 +322,45 @@ class CPUClassifier:
         str,
         str,
     ] | None:
-        family_number = (
-            self._extract_amd_family(
-                normalized_title
-            )
-        )
-
-        if family_number is None:
-            return None
-
-        model_match = (
-            self.AMD_MODEL_PATTERN.search(
-                normalized_title
-            )
-        )
-
-        if model_match is None:
-            return None
-
-        model_number = (
-            model_match.group(1)
-        )
-
-        suffix = (
-            model_match.group(2)
-            or ""
-        ).lower()
-
-        model_value = int(
-            model_number
-        )
-
-        if not (
-            1000
-            <= model_value
-            <= 9999
-        ):
-            return None
-
-        return (
-            family_number,
-            model_number,
-            suffix,
-        )
-
-    def _extract_amd_family(
-        self,
-        normalized_title: str,
-    ) -> str | None:
         for pattern in (
-            self.AMD_FAMILY_PATTERNS
+            self.AMD_FULL_PATTERNS
         ):
             match = pattern.search(
                 normalized_title
             )
 
-            if match is not None:
-                return (
-                    match.group(1)
-                )
+            if match is None:
+                continue
+
+            family_number = (
+                match.group(1)
+            )
+
+            model_number = (
+                match.group(2)
+            )
+
+            suffix = (
+                match.group(3)
+                or ""
+            ).lower()
+
+            model_value = int(
+                model_number
+            )
+
+            if not (
+                1000
+                <= model_value
+                <= 9999
+            ):
+                continue
+
+            return (
+                family_number,
+                model_number,
+                suffix,
+            )
 
         return None
 
@@ -472,28 +475,6 @@ class CPUClassifier:
     def _get_amd_variant_class(
         suffix: str,
     ) -> str:
-        """
-        Agrupa variantes AMD por comportamento
-        comercial/técnico parecido.
-
-        Exemplos:
-
-        5600
-            -> standard
-
-        5600X
-            -> x
-
-        5600G / 5600GT / 5600GE
-            -> apu
-
-        5700X3D
-            -> x3d
-
-        3600XT
-            -> xt
-        """
-
         suffix = (
             suffix
             or ""
@@ -637,9 +618,17 @@ class CPUClassifier:
             )
         )
 
+        mobile = (
+            legacy_mobile
+            or variant_class
+            == "mobile"
+        )
+
         broad_key = (
-            "cpu_intel_core_"
-            f"{family_raw}"
+            self._build_intel_broad_key(
+                family=family_raw,
+                mobile=mobile,
+            )
         )
 
         tier_key = (
@@ -688,11 +677,7 @@ class CPUClassifier:
                 "variant_class": (
                     variant_class
                 ),
-                "mobile": (
-                    legacy_mobile
-                    or variant_class
-                    == "mobile"
-                ),
+                "mobile": mobile,
                 "identity_confidence": (
                     "alta"
                 ),
@@ -780,6 +765,24 @@ class CPUClassifier:
             return "low_power"
 
         return "standard"
+
+    @staticmethod
+    def _build_intel_broad_key(
+        *,
+        family: str,
+        mobile: bool,
+    ) -> str:
+        platform = (
+            "mobile"
+            if mobile
+            else "desktop"
+        )
+
+        return (
+            "cpu_intel_core_"
+            f"{family}_"
+            f"{platform}"
+        )
 
     @staticmethod
     def _build_intel_tier_key(
