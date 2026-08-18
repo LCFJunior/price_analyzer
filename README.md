@@ -6,11 +6,11 @@ O PriceMonitor coleta anúncios do Mercado Livre, normaliza e classifica os prod
 
 O objetivo do projeto é ir além do percentual de desconto informado pelo marketplace, utilizando dados históricos e comparação entre produtos equivalentes para decidir se uma oferta realmente representa uma oportunidade.
 
-> **Status atual:** sistema funcional de monitoramento e análise de preços para o Mercado Livre, com classificação técnica de produtos, histórico próprio, comparação entre anúncios equivalentes e detecção inteligente de oportunidades.
+> **Status atual:** sistema funcional de monitoramento e análise de preços para o Mercado Livre, com classificação técnica de produtos, histórico próprio, comparação hierárquica entre anúncios equivalentes, deduplicação comercial por vendedor e detecção inteligente de oportunidades.
 
 ---
 
-## 🎯 Objetivo
+# 🎯 Objetivo
 
 Marketplaces frequentemente exibem descontos calculados a partir de preços anteriores que podem não representar o valor real de mercado.
 
@@ -28,6 +28,7 @@ Para isso, o sistema considera diferentes fontes de informação:
 - loja oficial;
 - logística do marketplace;
 - frete;
+- origem nacional ou internacional;
 - confiança na identificação do produto.
 
 A partir dessas informações, o sistema calcula uma pontuação e decide se determinado anúncio representa uma oportunidade relevante.
@@ -110,6 +111,10 @@ ProductClassifier
 ProductProfile
 ```
 
+A classificação não serve apenas para organizar os produtos.
+
+Ela é utilizada diretamente pelo sistema de comparação de preços para determinar quais anúncios podem ser considerados equivalentes.
+
 ---
 
 # 🪪 ProductProfile
@@ -123,6 +128,7 @@ O perfil pode conter:
 - modelo;
 - variante;
 - capacidade;
+- memória;
 - interface;
 - geração;
 - características técnicas;
@@ -181,6 +187,8 @@ samsung_9100_pro_1tb_nvme
 
 Essa comparação possui prioridade máxima.
 
+Quando existem anúncios suficientes do mesmo produto, eles são utilizados como principal referência de mercado.
+
 ---
 
 ## TIER
@@ -203,6 +211,8 @@ ssd_interno_nvme_gen5_1tb
 
 Isso impede, por exemplo, que um SSD NVMe Gen5 topo de linha seja comparado diretamente com SSDs NVMe Gen4 básicos apenas porque ambos possuem 1 TB.
 
+O mesmo conceito é aplicado a CPUs e GPUs.
+
 ---
 
 ## BROAD
@@ -217,6 +227,8 @@ ssd_interno_nvme_1tb
 
 É utilizado como último fallback quando não existem observações suficientes nos níveis mais específicos.
 
+O uso de BROAD é propositalmente mais conservador, pois grupos amplos podem possuir diferenças significativas de desempenho e preço.
+
 ---
 
 ## Prioridade de comparação
@@ -230,6 +242,8 @@ BROAD
 ```
 
 O sistema sempre tenta utilizar a referência mais específica disponível.
+
+Caso não existam observações suficientes, ele pode avançar para o próximo nível de comparação.
 
 ---
 
@@ -284,6 +298,28 @@ não são classificados como SSD.
 
 ---
 
+## Hierarquia de SSDs
+
+Exemplo:
+
+```text
+Produto:
+Samsung 9100 Pro 1TB NVMe Gen5
+
+BROAD:
+ssd_interno_nvme_1tb
+
+TIER:
+ssd_interno_nvme_gen5_1tb
+
+STRICT:
+samsung_9100_pro_1tb_nvme
+```
+
+Isso permite comparar primeiro o mesmo modelo e, caso não existam referências suficientes, utilizar SSDs tecnicamente semelhantes.
+
+---
+
 # 🖥️ Classificação de CPUs
 
 O sistema possui classificação dedicada para processadores AMD Ryzen e Intel Core.
@@ -313,13 +349,13 @@ Ryzen 9 9950X
 Exemplo de hierarquia:
 
 ```text
-BROAD
+BROAD:
 cpu_amd_ryzen_7
 
-TIER
+TIER:
 cpu_amd_ryzen_7_5000_x
 
-STRICT
+STRICT:
 amd_ryzen_7_5700x
 ```
 
@@ -333,6 +369,8 @@ APU
 ```
 
 podem ser separadas no nível TIER.
+
+Dessa forma, processadores de classes diferentes não precisam ser tratados automaticamente como equivalentes apenas por pertencerem à mesma família.
 
 ---
 
@@ -355,13 +393,13 @@ Core i9-9900K
 Exemplo:
 
 ```text
-BROAD
+BROAD:
 cpu_intel_core_i7
 
-TIER
+TIER:
 cpu_intel_core_i7_gen14_performance
 
-STRICT
+STRICT:
 intel_core_i7_14700k
 ```
 
@@ -391,18 +429,178 @@ Placa-mãe B550 para Ryzen 7 5700X
 
 # 🎮 Classificação de GPUs
 
-O sistema possui classificação dedicada para placas de vídeo.
+O sistema possui classificação dedicada para placas de vídeo NVIDIA e AMD.
 
-A classificação identifica informações como:
+O classificador identifica e normaliza informações como:
 
-- fabricante;
+- fabricante da placa;
+- fabricante da GPU;
 - modelo da GPU;
-- memória;
-- variante;
+- quantidade de VRAM;
+- variante comercial;
 - família;
-- chaves de comparação.
+- geração;
+- características relevantes para comparação;
+- nível de confiança da identidade;
+- chaves BROAD / TIER / STRICT.
 
-Isso permite separar modelos diferentes e evitar comparações inadequadas entre placas de categorias distintas.
+O objetivo é impedir que placas tecnicamente diferentes sejam utilizadas como referência umas das outras apenas por possuírem nomes semelhantes.
+
+---
+
+## Famílias NVIDIA
+
+O classificador possui suporte para diferentes famílias GeForce, incluindo modelos das linhas:
+
+```text
+RTX
+GTX
+GT
+```
+
+Entre os modelos trabalhados durante o desenvolvimento estão placas de diferentes gerações, incluindo exemplos como:
+
+```text
+RTX 5060
+RTX 5060 Ti
+RTX 5070
+RTX 5070 Ti
+RTX 5080
+RTX 5090
+
+RTX 4070
+RTX 4070 Super
+RTX 4070 Ti
+RTX 4070 Ti Super
+
+GTX e GT de gerações anteriores
+```
+
+O classificador continua sendo expandido conforme novos títulos reais são encontrados no marketplace.
+
+---
+
+## Famílias AMD
+
+Também existe suporte para diferentes placas Radeon RX.
+
+Exemplos trabalhados durante o desenvolvimento incluem:
+
+```text
+RX 580
+RX 7600
+RX 7700 XT
+RX 7800 XT
+RX 7900 XT
+RX 7900 XTX
+RX 9070
+RX 9070 XT
+```
+
+AMD e NVIDIA permanecem separadas nas referências técnicas.
+
+---
+
+## Fabricantes e variantes
+
+O classificador consegue utilizar informações comerciais presentes no título.
+
+Entre os fabricantes e variantes encontradas durante o desenvolvimento estão exemplos como:
+
+```text
+ASUS
+MSI
+Gigabyte
+Zotac
+Galax
+PNY
+Sapphire
+PowerColor
+XFX
+ASRock
+Soyo
+Revenger
+PCYes
+```
+
+E variantes como:
+
+```text
+Ventus
+Shadow
+Windforce
+Gaming OC
+TUF Gaming
+ROG Strix
+Aero
+Eagle
+Hellhound
+Red Devil
+Nitro+
+Pulse
+Merc
+```
+
+A presença de uma variante pode ser utilizada para construir uma identidade mais específica do anúncio.
+
+---
+
+## Hierarquia de GPUs
+
+Exemplo conceitual:
+
+```text
+Produto:
+MSI RTX 5060 Ventus 2X 8GB
+
+TIER:
+gpu_nvidia_rtx_5060_8gb
+
+STRICT:
+msi_rtx_5060_ventus_2x_8gb
+```
+
+O nível STRICT representa uma identidade comercial mais específica.
+
+O nível TIER permite comparar diferentes implementações da mesma GPU quando não existem observações suficientes do modelo exato.
+
+Por exemplo:
+
+```text
+MSI RTX 5060 Ventus 2X 8GB
+MSI RTX 5060 Shadow 2X 8GB
+outra RTX 5060 8GB equivalente
+```
+
+podem compartilhar um grupo técnico TIER quando apropriado.
+
+Ao mesmo tempo:
+
+```text
+RTX 5060
+≠
+RTX 5060 Ti
+≠
+RTX 5070
+```
+
+permanecem isoladas.
+
+Isso reduz significativamente o risco de gerar uma falsa oportunidade comparando placas de níveis diferentes.
+
+---
+
+## Títulos reais e normalização
+
+Títulos de marketplace podem ser incompletos, inconsistentes ou escritos de maneiras diferentes.
+
+Por isso, o classificador tenta normalizar variações antes de criar a identidade do produto.
+
+Ao mesmo tempo, o sistema mantém uma estratégia conservadora:
+
+> se não houver informações suficientes para determinar a identidade com confiança, é preferível não criar uma identidade específica falsa.
+
+Esse comportamento é importante principalmente para placas antigas, anúncios genéricos e produtos com títulos pouco informativos.
 
 ---
 
@@ -461,6 +659,28 @@ Isso reduz comparações inadequadas entre produtos com condições comerciais d
 
 ---
 
+## Exemplo de fallback
+
+Imagine um produto sem anúncios suficientes do mesmo modelo.
+
+```text
+STRICT:
+1 observação
+```
+
+Caso o mínimo necessário não seja atingido, o sistema pode procurar:
+
+```text
+TIER:
+5 observações
+```
+
+Se o TIER possuir quantidade suficiente de referências válidas, ele passa a ser utilizado.
+
+Somente quando os níveis mais específicos não possuem referências suficientes o sistema considera um grupo BROAD.
+
+---
+
 # 🏪 Deduplicação por vendedor
 
 Um marketplace pode possuir diversos anúncios do mesmo produto publicados pela mesma loja.
@@ -489,6 +709,8 @@ Loja B
 
 Isso produz uma referência de mercado mais equilibrada.
 
+A deduplicação é especialmente importante quando o sistema utiliza TIER ou BROAD, pois esses grupos podem conter uma quantidade maior de anúncios.
+
 ---
 
 # 📈 Análise de oportunidades
@@ -506,6 +728,8 @@ Entre os sinais utilizados estão:
 - logística do marketplace;
 - frete grátis;
 - confiança na identidade do produto.
+
+Esses sinais podem ser combinados para produzir uma pontuação.
 
 ---
 
@@ -590,9 +814,11 @@ baixa
 muito_baixa
 ```
 
-Produtos cuja identidade não pôde ser determinada de maneira confiável recebem penalizações na análise.
+Produtos cuja identidade não pôde ser determinada de maneira confiável recebem tratamento mais conservador na análise.
 
 Isso evita transformar automaticamente um produto genérico extremamente barato em uma "promoção imperdível".
+
+A confiança da identidade é especialmente importante quando os dados vêm diretamente de títulos escritos pelos vendedores.
 
 ---
 
@@ -647,6 +873,8 @@ Link do anúncio
 ```
 
 O envio ocorre apenas quando o produto passa pelas regras configuradas.
+
+Durante os testes, notificadores simulados também podem ser utilizados para validar o fluxo sem enviar mensagens reais.
 
 ---
 
@@ -728,7 +956,7 @@ Principais tecnologias utilizadas:
 
 # 📁 Estrutura do projeto
 
-A estrutura pode evoluir conforme novos módulos forem adicionados, mas atualmente segue aproximadamente a organização:
+A estrutura pode evoluir conforme novos módulos forem adicionados, mas atualmente segue aproximadamente esta organização:
 
 ```text
 PriceMonitor/
@@ -795,12 +1023,21 @@ Entre eles estão testes relacionados a:
 classificação de SSD
 classificação de CPU
 classificação de GPU
+
 histórico de preços
 baseline histórico
+
 comparação entre equivalentes
-STRICT / TIER / BROAD
+
+STRICT / TIER / BROAD de SSD
+STRICT / TIER / BROAD de CPU
+STRICT / TIER / BROAD de GPU
+
 deduplicação por vendedor
+
 PromotionEngine
+BugEngine
+
 fluxo completo de promoção
 controle de notificações
 ```
@@ -810,14 +1047,31 @@ Exemplos:
 ```powershell
 python test_ssd_classifier.py
 python test_cpu_classifier.py
+python test_gpu_classifier.py
+
 python test_peer_tier.py
+python test_cpu_peer_tier.py
+python test_gpu_peer_tier.py
 python test_peer_seller_dedup.py
+
 python test_repository_baseline.py
+
 python test_promotion_engine.py
 python test_promotion_flow.py
 ```
 
 Os testes utilizam verificações automáticas com `assert` para impedir regressões durante a evolução do sistema.
+
+Os testes de equivalência são particularmente importantes porque garantem, por exemplo, que:
+
+```text
+RTX 5060 != RTX 5060 Ti
+AMD != NVIDIA
+Gen4 != Gen5 quando o tier exige geração
+5700X != 5700X3D
+```
+
+e que diferentes variantes comerciais possam compartilhar TIER sem necessariamente compartilhar STRICT.
 
 ---
 
@@ -839,7 +1093,7 @@ Para executar o projeto:
 Clone o repositório:
 
 ```bash
-git clone URL_DO_REPOSITORIO
+git clone https://github.com/LCFJunior/price_analyzer.git
 cd price_analyzer
 ```
 
@@ -905,6 +1159,8 @@ Faça login no Mercado Livre utilizando esse perfil.
 
 Depois feche o Chrome antes de executar o monitor.
 
+> O perfil do navegador não deve ser enviado ao GitHub, pois pode conter cookies, sessões e outras informações privadas.
+
 ---
 
 # 🔐 Variáveis de ambiente
@@ -924,6 +1180,10 @@ TELEGRAM_BOT_TOKEN=SEU_TOKEN
 TELEGRAM_CHAT_ID=SEU_CHAT_ID
 TELEGRAM_ENABLED=true
 ```
+
+Nunca publique tokens reais.
+
+O arquivo `.env` deve permanecer ignorado pelo Git.
 
 ---
 
@@ -1056,7 +1316,9 @@ Algumas evoluções planejadas são:
 
 - ampliar a quantidade de categorias suportadas;
 - melhorar continuamente os classificadores;
+- ampliar a cobertura de GPUs NVIDIA e AMD;
 - adicionar mais modelos conhecidos;
+- melhorar o reconhecimento de títulos reais e pouco padronizados;
 - melhorar detecção de produtos genéricos;
 - expandir os níveis de equivalência comercial;
 - análise estatística mais avançada;
@@ -1081,7 +1343,9 @@ O projeto ainda possui algumas limitações:
 
 - foco atual no Mercado Livre;
 - classificadores precisam evoluir conforme novos produtos aparecem;
+- alguns títulos reais ainda podem não possuir informações suficientes para classificação segura;
 - títulos de anúncios podem conter informações incorretas;
+- produtos antigos e pouco padronizados podem exigir novas regras de identificação;
 - mudanças no HTML do marketplace podem exigir atualização dos seletores;
 - CAPTCHA pode exigir intervenção manual;
 - sessão do marketplace pode expirar;
@@ -1089,6 +1353,10 @@ O projeto ainda possui algumas limitações:
 - produtos novos podem não possuir histórico suficiente;
 - cupons ainda não fazem parte integral do cálculo do preço efetivo;
 - o sistema não realiza compras automaticamente.
+
+O sistema prioriza evitar falsos positivos.
+
+Por isso, quando um anúncio não possui informações suficientes para uma classificação confiável, ele pode permanecer sem uma identidade técnica específica em vez de ser agrupado incorretamente.
 
 ---
 
@@ -1102,7 +1370,7 @@ Além de sua aplicação prática, o PriceMonitor também funciona como projeto 
 - arquitetura de software;
 - orientação a objetos;
 - classificação de produtos;
-- processamento de texto;
+- processamento e normalização de texto;
 - análise estatística;
 - SQLite;
 - sistemas de pontuação;
@@ -1110,6 +1378,8 @@ Além de sua aplicação prática, o PriceMonitor também funciona como projeto 
 - integração com APIs;
 - testes;
 - Git e GitHub.
+
+O desenvolvimento busca evoluir progressivamente de um simples coletor de preços para um sistema capaz de construir suas próprias referências de mercado.
 
 ---
 
@@ -1137,7 +1407,40 @@ Controle de duplicidade
 Notificação
 ```
 
-A prioridade atual do desenvolvimento é aumentar a qualidade da inteligência de comparação e reduzir falsos positivos antes da expansão para novos marketplaces.
+A arquitetura atual já permite trabalhar separadamente com:
+
+```text
+SSD
+CPU
+GPU
+```
+
+utilizando classificadores específicos e referências hierárquicas.
+
+O sistema também já possui testes específicos para verificar o isolamento correto entre grupos de produtos e impedir que referências inadequadas sejam utilizadas na análise.
+
+A prioridade atual do desenvolvimento é:
+
+1. aumentar a cobertura dos classificadores;
+2. melhorar o reconhecimento de títulos reais do marketplace;
+3. aumentar a qualidade das referências de mercado;
+4. reduzir falsos positivos;
+5. fortalecer os testes;
+6. somente depois expandir o monitoramento para novos marketplaces.
+
+---
+
+# 🔒 Segurança e uso responsável
+
+- não publique tokens;
+- não publique arquivos `.env`;
+- não versione perfis do navegador;
+- não publique cookies ou sessões;
+- mantenha credenciais fora do código;
+- respeite os termos de uso dos marketplaces;
+- utilize intervalos razoáveis entre coletas;
+- trate alertas como indícios, não como garantia de estoque, preço ou entrega;
+- mantenha intervenção humana para decisões de compra.
 
 ---
 
