@@ -1,4 +1,4 @@
-# PriceMonitor
+# PriceAnalyzer
 
 Monitor inteligente de preços, promoções e oportunidades para marketplaces, desenvolvido em Python.
 
